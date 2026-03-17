@@ -912,13 +912,16 @@ async function handlePlatePhoto(input) {
     try {
       const canvas=document.getElementById('scanCanvas'),ctx=canvas.getContext('2d'),img=new Image();
       img.onload=async()=>{
-        canvas.width=img.width;canvas.height=img.height;ctx.drawImage(img,0,0);
-        // Kontrast erhöhen aber nicht zerstören
+        // Zentralen Bereich zuschneiden (Nummernschild ist meist in der Mitte)
+        const cropX=Math.floor(img.width*0.05), cropY=Math.floor(img.height*0.15);
+        const cropW=Math.floor(img.width*0.9), cropH=Math.floor(img.height*0.55);
+        canvas.width=cropW;canvas.height=cropH;
+        ctx.drawImage(img,cropX,cropY,cropW,cropH,0,0,cropW,cropH);
+        // Starke Binarisierung für OCR
         const id=ctx.getImageData(0,0,canvas.width,canvas.height),d=id.data;
         for(let i=0;i<d.length;i+=4){
           const a=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);
-          const v=a>140?255:a<80?0:Math.round((a-80)/60*255);
-          d[i]=d[i+1]=d[i+2]=v;
+          d[i]=d[i+1]=d[i+2]=a>128?255:0;
         }
         ctx.putImageData(id,0,0);
         // Zwei Durchläufe: Englisch (Zahlen/Buchstaben) + Deutsch
@@ -945,8 +948,9 @@ function t(key){return T[lang][key]||T.de[key]||key;}
 function extractPlate(text){
   // OCR-Text bereinigen
   let c=text.toUpperCase().replace(/[^A-Z0-9\s\-]/g,'').trim();
+  console.log('extractPlate input:',c);
   // Strategie 1: Direkt in der Fahrzeugliste suchen (alle Worte/Tokens prüfen)
-  const tokens=c.replace(/[\s\-]+/g,' ').split(' ');
+  const tokens=c.replace(/[\s\-]+/g,' ').split(' ').filter(t=>t.length>0);
   // Kombinationen von 1-3 aufeinanderfolgenden Tokens testen
   for(let len=1;len<=Math.min(3,tokens.length);len++){
     for(let i=0;i<=tokens.length-len;i++){
@@ -955,7 +959,7 @@ function extractPlate(text){
       if(v) return v.plate;
     }
   }
-  // Strategie 2: Buchstaben+Ziffern-Muster extrahieren und testen
+  // Strategie 2: Buchstaben+Ziffern-Muster extrahieren und in Liste suchen
   const patterns=c.match(/[A-Z]{1,3}\s*\d{1,4}/g)||[];
   for(const p of patterns){
     const norm=p.replace(/\s/g,'');
@@ -966,6 +970,18 @@ function extractPlate(text){
   const full=c.replace(/[\s\-]/g,'');
   const v=findVehicle(full);
   if(v) return v.plate;
+  // Strategie 4 (Fallback): CH-Kennzeichen-Muster erkennen auch wenn nicht in Liste
+  // Formate: XX 1234, XX1234, X 1234 (2 Buchstaben + 1-6 Ziffern)
+  const chPatterns=c.match(/\b([A-Z]{2})\s*(\d{1,6})\b/g)||[];
+  if(chPatterns.length>0){
+    // Bestes Match zurückgeben (längste Ziffernfolge bevorzugen)
+    let best=null, bestLen=0;
+    for(const p of chPatterns){
+      const m=p.match(/([A-Z]{2})\s*(\d{1,6})/);
+      if(m && m[2].length>bestLen){best=m[1]+' '+m[2];bestLen=m[2].length;}
+    }
+    if(best) return best;
+  }
   return null;
 }
 function showPlate(p){document.getElementById('plateResult').classList.remove('hidden');document.getElementById('plateDisplayText').textContent=p;}
