@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a56db">
+<title>HHM Fahrzeug-Rapport</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<style>
+:root {
+  --primary:#1a56db;--primary-dark:#1342a8;--primary-light:#e8effc;
+  --danger:#dc2626;--danger-light:#fef2f2;--success:#16a34a;--success-light:#f0fdf4;
+  --warning:#f59e0b;--warning-light:#fffbeb;--orange:#ea580c;--orange-light:#fff7ed;
+  --g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g300:#d1d5db;--g400:#9ca3af;
+  --g500:#6b7280;--g600:#4b5563;--g700:#374151;--g800:#1f2937;
+  --radius:12px;--shadow:0 1px 3px rgba(0,0,0,0.1);--shadow-md:0 4px 6px rgba(0,0,0,0.07);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--g100);color:var(--g800);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+
+/* === HEADER === */
+.header{background:var(--primary);color:white;padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:var(--shadow-md)}
+.header h1{font-size:17px;font-weight:600}
+.header-sub{font-size:11px;opacity:.85}
+.header-back{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:white;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;min-height:36px;-webkit-tap-highlight-color:transparent}
+
+/* === LANG BAR === */
+.lang-bar{background:white;padding:8px 16px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--g200);overflow-x:auto;position:sticky;top:54px;z-index:99;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.lang-bar::-webkit-scrollbar{display:none}
+.lang-btn{padding:8px 14px;border:1.5px solid var(--g200);border-radius:8px;font-size:13px;cursor:pointer;background:var(--g50);white-space:nowrap;font-weight:500;min-height:38px;-webkit-tap-highlight-color:transparent;user-select:none}
+.lang-btn.active{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+
+/* === PROGRESS === */
+.progress-bar{background:var(--g200);height:4px;position:sticky;top:92px;z-index:98}
+.progress-fill{background:var(--primary);height:100%;transition:width .4s}
+.step-info{text-align:center;padding:12px 16px 6px;font-size:13px;color:var(--g500)}
+
+/* === LAYOUT === */
+.container{max-width:600px;margin:0 auto;padding:0 16px 120px}
+.card{background:white;border-radius:var(--radius);padding:18px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card-title{font-size:15px;font-weight:600;color:var(--g700);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* === FORMS (font-size 16px verhindert iOS Zoom!) === */
+label{display:block;font-size:14px;font-weight:500;color:var(--g600);margin-bottom:6px}
+.optional-tag{font-size:11px;color:var(--g400);font-weight:400}
+input[type="text"],input[type="tel"],input[type="number"],input[type="date"],input[type="time"],textarea,select{width:100%;padding:12px 14px;border:1.5px solid var(--g200);border-radius:10px;font-size:16px;font-family:inherit;background:var(--g50);color:var(--g800);-webkit-appearance:none;min-height:48px}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--primary);background:white;box-shadow:0 0 0 3px rgba(26,86,219,.1)}
+textarea{resize:vertical;min-height:100px}
+.form-group{margin-bottom:16px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* === OPTION BUTTONS (min 44px Touch-Target) === */
+.option-group{display:flex;flex-wrap:wrap;gap:8px}
+.option-btn{padding:12px 14px;border:1.5px solid var(--g200);border-radius:10px;background:var(--g50);font-size:14px;cursor:pointer;transition:all .15s;flex:1;min-width:calc(50% - 4px);text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;user-select:none}
+.option-btn:active{transform:scale(0.97);opacity:.85}
+.option-btn.selected{border-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:600}
+
+/* === CHOICE CARDS === */
+.choice-card{border:2px solid var(--g200);border-radius:16px;padding:24px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:12px;-webkit-tap-highlight-color:transparent}
+.choice-card:active{transform:scale(0.98);opacity:.9}
+.choice-icon{font-size:48px;margin-bottom:8px}
+.choice-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.choice-desc{font-size:13px;color:var(--g500)}
+.choice-card.tech{border-color:var(--orange)}.choice-card.tech:hover,.choice-card.tech:active{background:var(--orange-light)}
+.choice-card.damage{border-color:var(--danger)}.choice-card.damage:hover,.choice-card.damage:active{background:var(--danger-light)}
+
+/* === TOGGLES === */
+.toggle-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--g100);font-size:14px}
+.toggle-row:last-child{border-bottom:none}
+.toggle{width:50px;height:28px;border-radius:14px;background:var(--g300);position:relative;cursor:pointer;transition:background .3s;flex-shrink:0;-webkit-tap-highlight-color:transparent}
+.toggle.on{background:var(--primary)}
+.toggle::after{content:'';position:absolute;width:22px;height:22px;background:white;border-radius:50%;top:3px;left:3px;transition:transform .3s;box-shadow:var(--shadow)}
+.toggle.on::after{transform:translateX(22px)}
+
+/* === PHOTOS === */
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.photo-add{aspect-ratio:1;border:2px dashed var(--g300);border-radius:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:13px;color:var(--g400);background:var(--g50);min-height:80px;-webkit-tap-highlight-color:transparent}
+.photo-add:active{border-color:var(--primary);color:var(--primary);background:var(--primary-light)}
+.photo-thumb{aspect-ratio:1;border-radius:10px;overflow:hidden;position:relative}
+.photo-thumb img{width:100%;height:100%;object-fit:cover}
+.photo-remove{position:absolute;top:4px;right:4px;width:28px;height:28px;background:rgba(0,0,0,.6);color:white;border:none;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+
+/* === BUTTONS === */
+.btn{padding:14px 22px;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;-webkit-tap-highlight-color:transparent;user-select:none}
+.btn:active{transform:scale(0.98);opacity:.9}
+.btn-primary{background:var(--primary);color:white}
+.btn-primary:disabled{background:var(--g300);cursor:not-allowed;transform:none;opacity:1}
+.btn-outline{background:white;color:var(--g600);border:1.5px solid var(--g200)}
+.btn-row{display:flex;gap:10px;padding:14px 16px;padding-bottom:max(14px,var(--safe-bottom));position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--g200);max-width:600px;margin:0 auto;z-index:50}
+.btn-row .btn{flex:1}
+
+/* === SCAN / PLATE === */
+.scan-area{border:3px dashed var(--primary);border-radius:16px;padding:20px;text-align:center;background:var(--primary-light);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.scan-area:active{border-color:var(--primary-dark);background:#d6e4fa}
+.scan-area .s-icon{font-size:36px;display:block;margin-bottom:6px}
+.scan-area .s-label{font-size:14px;font-weight:600;color:var(--primary)}
+.scan-area .s-hint{font-size:12px;color:var(--g500);margin-top:4px;display:block}
+.scan-preview{margin-top:12px;border-radius:10px;overflow:hidden;display:none}
+.scan-preview img{width:100%;display:block;border-radius:10px}
+.scan-preview canvas{display:none}
+.ocr-status{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:13px;display:none;align-items:center;gap:10px}
+.ocr-status.loading{background:var(--warning-light);color:#92400e;display:flex}
+.ocr-status.success{background:var(--success-light);color:var(--success);display:flex}
+.ocr-status.error{background:var(--danger-light);color:var(--danger);display:flex}
+.ocr-progress-bar{width:100%;height:6px;background:var(--g200);border-radius:3px;overflow:hidden;margin-top:8px;display:none}
+.ocr-progress-fill{height:100%;background:var(--primary);border-radius:3px;transition:width .3s;width:0%}
+.plate-display{background:var(--g800);color:white;font-size:28px;font-weight:800;letter-spacing:3px;text-align:center;padding:16px 24px;border-radius:10px;border:3px solid var(--g600);margin:12px 0;font-family:'Courier New',monospace;position:relative}
+.plate-display .ctag{position:absolute;left:8px;top:50%;transform:translateY(-50%);background:#003399;color:white;font-size:10px;padding:3px 5px;border-radius:4px;letter-spacing:0;font-weight:600}
+.confirmed-card{background:var(--success-light);border:2px solid var(--success);border-radius:var(--radius);padding:20px;margin-bottom:12px;display:none;animation:slideIn .4s}
+.confirmed-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.check-icon{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:20px;flex-shrink:0}
+.confirmed-title{font-size:17px;font-weight:600;color:var(--success)}
+.confirmed-sub{font-size:14px;color:var(--g600)}
+.blocked-msg{background:var(--danger-light);border:2px solid var(--danger);border-radius:var(--radius);padding:24px;text-align:center;margin-top:14px;display:none}
+.blocked-msg .b-icon{font-size:48px;margin-bottom:10px}
+.blocked-msg .b-title{font-size:18px;font-weight:700;color:var(--danger);margin-bottom:6px}
+.blocked-msg .b-text{font-size:14px;color:var(--g600);margin-bottom:8px}
+.blocked-msg .b-phone{font-size:22px;font-weight:700;color:var(--danger);margin:14px 0}
+.blocked-msg .b-phone a{color:var(--danger);text-decoration:none}
+
+/* === SUCCESS / SUMMARY === */
+.success-screen{text-align:center;padding:44px 20px}
+.success-icon{font-size:64px;margin-bottom:16px}
+.success-title{font-size:22px;font-weight:700;margin-bottom:10px}
+.success-text{color:var(--g500);margin-bottom:28px;font-size:15px}
+.summary-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--g100);font-size:14px}
+.summary-row:last-child{border-bottom:none}
+.summary-label{color:var(--g500);flex-shrink:0;margin-right:10px}
+.summary-value{color:var(--g800);font-weight:500;text-align:right}
+.summary-photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.summary-photos img{width:64px;height:64px;object-fit:cover;border-radius:8px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600}
+.badge-danger{background:var(--danger-light);color:var(--danger)}
+.badge-warning{background:var(--warning-light);color:var(--warning)}
+.badge-success{background:var(--success-light);color:var(--success)}
+.badge-orange{background:var(--orange-light);color:var(--orange)}
+.info-box{background:var(--primary-light);border-left:3px solid var(--primary);padding:12px 14px;border-radius:0 8px 8px 0;font-size:13px;color:var(--g600);margin-bottom:14px}
+.edit-btn{font-size:14px;color:var(--primary);background:none;border:none;cursor:pointer;text-decoration:underline;padding:6px 4px;min-height:36px}
+.type-badge{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:600;margin-left:6px}
+.type-badge.tech{background:var(--orange);color:white}
+.type-badge.damage{background:var(--danger);color:white}
+.hidden{display:none!important}
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.spinner{width:18px;height:18px;border:2.5px solid var(--g300);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gps-btn{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--primary-light);border:1.5px solid var(--primary);border-radius:10px;color:var(--primary);font-size:14px;cursor:pointer;font-weight:500;width:100%;font-family:inherit;min-height:48px;-webkit-tap-highlight-color:transparent}
+
+/* === DEVICE BADGE === */
+.device-badge{position:fixed;top:8px;right:8px;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(0,0,0,.15);color:white;z-index:200;pointer-events:none;opacity:.6}
+
+/* ============================
+   DESKTOP (≥768px)
+   ============================ */
+@media(min-width:768px){
+  body{background:var(--g200)}
+  .container{padding:0 24px 120px}
+  .card{padding:24px;margin-bottom:16px;box-shadow:var(--shadow-md)}
+  .card-title{font-size:16px}
+  .header{padding:14px 24px}
+  .header h1{font-size:19px}
+  .lang-bar{padding:10px 24px;justify-content:center}
+  .btn-row{padding:16px 24px;box-shadow:0 -2px 8px rgba(0,0,0,.08)}
+  .option-btn{min-width:calc(33.33% - 6px);padding:12px 16px}
+  .option-btn:hover{border-color:var(--primary);background:var(--primary-light)}
+  .choice-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+  .choice-card:active{transform:none}
+  .photo-grid{grid-template-columns:repeat(4,1fr)}
+  .summary-photos img{width:80px;height:80px}
+  .btn:hover{filter:brightness(1.05)}
+  .btn:active{transform:none}
+  .blocked-msg{max-width:400px;margin-left:auto;margin-right:auto}
+}
+
+/* LARGE DESKTOP (≥1024px) */
+@media(min-width:1024px){
+  .container{max-width:680px}
+  .btn-row{max-width:680px}
+  .option-btn{min-width:calc(25% - 6px)}
+  .photo-grid{grid-template-columns:repeat(5,1fr);gap:10px}
+}
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+<div class="header">
+  <div><h1>HHM Fahrzeug-Rapport</h1><div class="header-sub" data-t="headerSub"></div></div>
+</div>
+<div class="lang-bar" id="langBar"></div>
+<div class="container" style="padding-top:14px;">
+  <div class="card">
+    <div class="card-title"><span>🚛</span> <span data-t="scanTitle"></span></div>
+    <div class="info-box" data-t="scanInfo"></div>
+
+    <!-- PRIMARY: Manual plate entry (always visible) -->
+    <div class="form-group">
+      <label style="font-size:14px;font-weight:600;" data-t="manualLabel"></label>
+      <input type="text" id="manualPlateInput" placeholder="z.B. ZH5, ZH12, BL1185..."
+             inputmode="text" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false"
+             enterkeyhint="search"
+             style="font-size:24px;font-weight:700;text-align:center;letter-spacing:3px;padding:16px;"
+             onkeydown="if(event.key==='Enter'){checkManualPlate();this.blur();}">
+    </div>
+    <button class="btn btn-primary" onclick="checkManualPlate()" data-t="checkBtn" style="margin-bottom:12px;"></button>
+
+    <div style="text-align:center;margin:8px 0 12px;">
+      <span style="font-size:12px;color:var(--g400);" data-t="orDivider"></span>
+    </div>
+
+    <!-- SECONDARY: Camera scan -->
+    <div class="scan-area" id="scanArea" onclick="document.getElementById('plateInput').click()" style="padding:16px;">
+      <span class="s-icon" style="font-size:32px;">📷</span>
+      <span class="s-label" style="font-size:13px;" data-t="scanLabel"></span>
+      <span class="s-hint" data-t="scanHint"></span>
+    </div>
+    <input type="file" id="plateInput" accept="image/*" capture="environment" class="hidden" onchange="handlePlatePhoto(this)">
+    <div class="scan-preview" id="scanPreview"><img id="scanPreviewImg" src=""><canvas id="scanCanvas"></canvas></div>
+    <div class="ocr-status" id="ocrStatus"><div class="spinner"></div><span id="ocrStatusText"></span></div>
+    <div class="ocr-progress-bar" id="ocrProgressBar"><div class="ocr-progress-fill" id="ocrProgressFill"></div></div>
+    <div id="plateResult" class="hidden">
+      <div class="plate-display"><span class="ctag">CH</span><span id="plateDisplayText"></span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:var(--g500);" data-t="recognizedPlate"></span>
+        <button class="edit-btn" onclick="editPlate()" data-t="correctBtn"></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="confirmed-card" id="confirmedCard">
+    <div class="confirmed-header">
+      <div class="check-icon" style="background:var(--success)">✓</div>
+      <div>
+        <div class="confirmed-title" data-t="vehicleConfirmed"></div>
+        <div class="confirmed-sub"><strong id="cName"></strong> – <span id="cPlate"></span></div>
+      </div>
+    </div>
+    <div id="cVinRow" style="display:none;font-size:11px;color:var(--g500);margin-bottom:10px;justify-content:space-between;">
+      <span>VIN:</span><span id="cVin" style="font-family:monospace;font-weight:500;"></span>
+    </div>
+    <button class="btn btn-primary" onclick="startRapport()" data-t="startRapport"></button>
+  </div>
+
+  <div class="blocked-msg" id="blockedMsg">
+    <div class="b-icon">🚫</div>
+    <div class="b-title" data-t="notRegisteredTitle"></div>
+    <div class="b-text" data-t="notRegisteredText"></div>
+    <div class="b-phone"><a href="tel:+413453345">+41 345 33 45</a></div>
+    <button class="btn btn-outline" onclick="resetStart()" data-t="tryScanAgain"></button>
+  </div>
+</div>
+</div>
+
+<div id="rapportApp" class="hidden">
+<div class="header">
+  <div><h1>HHM Rapport <span class="type-badge" id="typeBadge"></span></h1><div class="header-sub" id="rapportPlate"></div></div>
+  <button class="header-back" onclick="abortRapport()" data-t="cancel"></button>
+</div>
+<div class="lang-bar" id="langBar2"></div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:25%"></div></div>
+<div class="step-info" id="stepInfo"></div>
+<div class="container">
+
+  <!-- STEP 1: Type -->
+  <div class="step fade-in" id="step1">
+    <div class="card">
+      <div class="card-title"><span>❓</span> <span data-t="whatToReport"></span></div>
+      <div class="choice-card tech" onclick="selectType('tech')">
+        <div class="choice-icon">🔧</div>
+        <div class="choice-title" data-t="techTitle"></div>
+        <div class="choice-desc" data-t="techDesc"></div>
+      </div>
+      <div class="choice-card damage" onclick="selectType('damage')">
+        <div class="choice-icon">💥</div>
+        <div class="choice-title" data-t="damageTitle"></div>
+        <div class="choice-desc" data-t="damageDesc"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: Details -->
+  <div class="step hidden fade-in" id="step2">
+    <div id="techDetails" class="hidden">
+      <div class="card">
+        <div class="card-title"><span>🔧</span> <span data-t="techTitle"></span></div>
+        <div class="form-group">
+          <label class="required" data-t="category"></label>
+          <div class="option-group" id="techCatGroup">
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catEngine"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catBrakes"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catElectronics"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catTires"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catHydraulics"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catTransmission"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catLights"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catCooling"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catSteering"></div>
+            <div class="option-btn" onclick="sel(this,'techCategory')" data-t="catOther"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="required" data-t="errorDescription"></label>
+          <textarea id="techDescription" rows="4"></textarea>
+        </div>
+        <div class="form-group">
+          <label data-t="urgency"></label>
+          <div class="option-group">
+            <div class="option-btn" onclick="sel(this,'urgency')" style="border-color:var(--success);color:var(--success)" data-t="urgLow"></div>
+            <div class="option-btn" onclick="sel(this,'urgency')" style="border-color:var(--warning);color:var(--warning)" data-t="urgMedium"></div>
+            <div class="option-btn" onclick="sel(this,'urgency')" style="border-color:var(--danger);color:var(--danger)" data-t="urgHigh"></div>
+            <div class="option-btn" onclick="sel(this,'urgency')" style="border-color:var(--danger);color:var(--danger)" data-t="urgStopped"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label data-t="drivable"></label>
+          <div class="option-group">
+            <div class="option-btn" onclick="sel(this,'drivable')" data-t="yes"></div>
+            <div class="option-btn" onclick="sel(this,'drivable')" data-t="limited"></div>
+            <div class="option-btn" onclick="sel(this,'drivable')" data-t="no"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label data-t="mileage"></label>
+          <input type="number" id="techMileage" placeholder="z.B. 145320" inputmode="numeric">
+        </div>
+      </div>
+    </div>
+
+    <div id="damageDetails" class="hidden">
+      <div class="card">
+        <div class="card-title"><span>💥</span> <span data-t="damageTitle"></span></div>
+        <div class="form-group">
+          <label class="required" data-t="damageKind"></label>
+          <div class="option-group">
+            <div class="option-btn" onclick="sel(this,'damageType')" data-t="dAccident"></div>
+            <div class="option-btn" onclick="sel(this,'damageType')" data-t="dParking"></div>
+            <div class="option-btn" onclick="sel(this,'damageType')" data-t="dCargo"></div>
+            <div class="option-btn" onclick="sel(this,'damageType')" data-t="dVandalism"></div>
+            <div class="option-btn" onclick="sel(this,'damageType')" data-t="catOther"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label data-t="affectedParts"></label>
+          <div class="option-group">
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pBumper"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pFront"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pRear"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pLeft"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pRight"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pRoof"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pMirror"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pTires"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pCargo"></div>
+            <div class="option-btn multi" onclick="togM(this,'damagedParts')" data-t="pUnderbody"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="required" data-t="description"></label>
+          <textarea id="damageDescription" rows="4"></textarea>
+        </div>
+        <div class="form-group">
+          <label data-t="severityLabel"></label>
+          <div class="option-group">
+            <div class="option-btn" onclick="sel(this,'severity')" style="border-color:var(--success);color:var(--success)" data-t="sevLight"></div>
+            <div class="option-btn" onclick="sel(this,'severity')" style="border-color:var(--warning);color:var(--warning)" data-t="sevMedium"></div>
+            <div class="option-btn" onclick="sel(this,'severity')" style="border-color:var(--danger);color:var(--danger)" data-t="sevHeavy"></div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label data-t="date"></label><input type="date" id="damageDate"></div>
+          <div class="form-group"><label data-t="time"></label><input type="time" id="damageTime"></div>
+        </div>
+        <div class="form-group"><label data-t="mileage"></label><input type="number" id="damageMileage" inputmode="numeric"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>📋</span> <span data-t="additionalInfo"></span></div>
+        <div class="toggle-row">
+          <span data-t="hasOpponent"></span>
+          <div class="toggle" id="hasOpponent" onclick="togS(this)"></div>
+        </div>
+        <div id="opponentFields" class="hidden" style="margin-top:10px;">
+          <div class="form-group"><label data-t="oppName"></label><input type="text" id="oppName"></div>
+          <div class="form-group"><label data-t="oppPlate"></label><input type="text" id="oppPlate" autocapitalize="characters"></div>
+          <div class="form-group"><label data-t="oppInsurance"></label><input type="text" id="oppInsurance"></div>
+          <div class="form-group"><label data-t="oppPhone"></label><input type="tel" id="oppPhone"></div>
+        </div>
+        <div class="toggle-row">
+          <span data-t="hasWitness"></span>
+          <div class="toggle" id="hasWitness" onclick="togS(this)"></div>
+        </div>
+        <div id="witnessFields" class="hidden" style="margin-top:10px;">
+          <div class="form-group"><label data-t="witName"></label><input type="text" id="witName"></div>
+          <div class="form-group"><label data-t="witPhone"></label><input type="tel" id="witPhone"></div>
+        </div>
+        <div class="toggle-row">
+          <span data-t="policeInvolved"></span>
+          <div class="toggle" id="policeInvolved" onclick="togS(this)"></div>
+        </div>
+        <div id="policeFields" class="hidden" style="margin-top:8px;">
+          <div class="form-group"><label data-t="policeRef"></label><input type="text" id="policeRef"></div>
+        </div>
+        <div class="toggle-row">
+          <span data-t="insuranceRelevant"></span>
+          <div class="toggle" id="insRelevant" onclick="togS(this)"></div>
+        </div>
+        <div class="form-group" style="margin-top:12px;">
+          <label data-t="estCost"></label>
+          <input type="number" id="estCost" inputmode="numeric">
+        </div>
+        <div class="form-group">
+          <label data-t="drivable"></label>
+          <div class="option-group">
+            <div class="option-btn" onclick="sel(this,'drivable')" data-t="yes"></div>
+            <div class="option-btn" onclick="sel(this,'drivable')" data-t="limited"></div>
+            <div class="option-btn" onclick="sel(this,'drivable')" data-t="no"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title"><span>📍</span> <span data-t="location"></span></div>
+        <div class="form-group">
+          <button class="gps-btn" id="gpsBtn" onclick="getGPS()">📍 <span data-t="getGPS"></span></button>
+          <div id="gpsResult" style="font-size:11px;color:var(--g500);margin-top:5px;"></div>
+        </div>
+        <div class="form-group">
+          <label data-t="addressManual"></label>
+          <input type="text" id="locationText">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: Photos + Contact -->
+  <div class="step hidden fade-in" id="step3">
+    <div class="card">
+      <div class="card-title"><span>📸</span> <span data-t="photos"></span></div>
+      <div class="info-box" id="photoHint" data-t="photoHint"></div>
+      <div class="photo-grid" id="photoGrid">
+        <div class="photo-add" onclick="document.getElementById('photoFileInput').click()">
+          <span style="font-size:28px">📷</span><span data-t="photoBtn"></span>
+        </div>
+      </div>
+      <input type="file" id="photoFileInput" accept="image/*" capture="environment" multiple class="hidden" onchange="handlePhotos(this)">
+    </div>
+    <div class="card">
+      <div class="card-title"><span>👤</span> <span data-t="yourContact"></span> <span class="optional-tag" data-t="optional"></span></div>
+      <div class="info-box" style="background:var(--g50);border-color:var(--g300);" data-t="contactHint"></div>
+      <div class="form-group"><label data-t="yourName"></label><input type="text" id="driverName"></div>
+      <div class="form-group"><label data-t="yourPhone"></label><input type="tel" id="driverPhone"></div>
+    </div>
+  </div>
+
+  <!-- STEP 4: Summary -->
+  <div class="step hidden fade-in" id="step4">
+    <div class="card"><div class="card-title"><span>✅</span> <span data-t="summary"></span></div><div id="summaryContent"></div></div>
+    <div class="card" id="summaryPhotosCard"><div class="card-title"><span>📸</span> <span data-t="photos"></span></div><div class="summary-photos" id="summaryPhotos"></div></div>
+    <div class="info-box" data-t="sendHint"></div>
+  </div>
+
+  <!-- SUCCESS -->
+  <div class="step hidden fade-in" id="successScreen">
+    <div class="success-screen">
+      <div class="success-icon">✅</div>
+      <div class="success-title" data-t="successTitle"></div>
+      <div class="success-text" id="successText"></div>
+      <div class="card" style="text-align:left;">
+        <div class="summary-row"><span class="summary-label">Rapport-ID</span><span class="summary-value" id="rptId"></span></div>
+        <div class="summary-row"><span class="summary-label" data-t="type"></span><span class="summary-value" id="rptType"></span></div>
+        <div class="summary-row"><span class="summary-label" data-t="customer"></span><span class="summary-value" id="rptCustomer"></span></div>
+        <div class="summary-row"><span class="summary-label" data-t="sentAt"></span><span class="summary-value" id="rptTime"></span></div>
+      </div><br>
+      <button class="btn btn-primary" onclick="fullReset()" data-t="newRapport"></button>
+    </div>
+  </div>
+</div>
+
+<div class="btn-row" id="navBtns">
+  <button class="btn btn-outline" id="prevBtn" onclick="prevStep()" data-t="back"></button>
+  <button class="btn btn-primary" id="nextBtn" onclick="nextStep()" data-t="next"></button>
+</div>
+</div>
+
+<script>
+// ====== TRANSLATIONS ======
+const T = {
+de: {
+  headerSub:'Schaden- & Technik-Meldung',scanTitle:'Nummernschild scannen',
+  scanInfo:'Gib die Fahrzeugnummer ein (z.B. ZH5) oder fotografiere das Nummernschild. Das Fahrzeug muss bei HHM registriert sein.',
+  scanLabel:'Nummernschild fotografieren',scanHint:'Tippen um Kamera zu öffnen',
+  recognizedPlate:'Erkanntes Kennzeichen',correctBtn:'Korrigieren',
+  manualLabel:'Kennzeichen eingeben',checkBtn:'Fahrzeug prüfen',orDivider:'— oder —',skipScan:'Manuell eingeben',
+  vehicleConfirmed:'Fahrzeug registriert',registeredAs:'Zugewiesen an:',startRapport:'Rapport starten',
+  notRegisteredTitle:'Fahrzeug nicht registriert',
+  notRegisteredText:'Dieses Kennzeichen ist nicht in der HHM-Datenbank hinterlegt. Bitte melden Sie sich bei der Disposition:',
+  tryScanAgain:'Anderes Fahrzeug scannen',cancel:'Abbrechen',
+  whatToReport:'Was möchtest du melden?',
+  techTitle:'Technisches Problem',techDesc:'Motor, Bremsen, Elektronik, Reifen, Hydraulik, etc.',
+  damageTitle:'Schaden / Unfall',damageDesc:'Stossstange, Kratzer, Kollision, Parkschaden, etc.',
+  category:'Kategorie',catEngine:'Motor',catBrakes:'Bremsen',catElectronics:'Elektronik',
+  catTires:'Reifen',catHydraulics:'Hydraulik',catTransmission:'Getriebe',catLights:'Beleuchtung',
+  catCooling:'Kühlung',catSteering:'Lenkung',catOther:'Sonstiges',
+  errorDescription:'Fehlerbeschreibung',urgency:'Dringlichkeit',
+  urgLow:'Gering',urgMedium:'Mittel',urgHigh:'Hoch',urgStopped:'Fahrzeug steht',
+  drivable:'Fahrzeug fahrbereit?',yes:'Ja',limited:'Eingeschränkt',no:'Nein',
+  mileage:'Kilometerstand',damageKind:'Art des Schadens',
+  dAccident:'Unfall',dParking:'Parkschaden',dCargo:'Ladungsschaden',dVandalism:'Vandalismus',
+  affectedParts:'Betroffene Teile',pBumper:'Stossstange',pFront:'Front',pRear:'Heck',
+  pLeft:'Seite links',pRight:'Seite rechts',pRoof:'Dach',pMirror:'Spiegel',
+  pTires:'Reifen',pCargo:'Laderaum',pUnderbody:'Unterboden',
+  description:'Beschreibung',severityLabel:'Schweregrad',
+  sevLight:'Leicht',sevMedium:'Mittel',sevHeavy:'Schwer',
+  date:'Datum',time:'Uhrzeit',additionalInfo:'Zusätzliche Angaben',
+  hasOpponent:'Unfallgegner vorhanden?',oppName:'Name Gegner',oppPlate:'Kennzeichen Gegner',
+  oppInsurance:'Versicherung Gegner',oppPhone:'Telefon Gegner',
+  hasWitness:'Zeugen vorhanden?',witName:'Name Zeuge',witPhone:'Telefon Zeuge',
+  policeInvolved:'Polizei involviert?',policeRef:'Aktenzeichen',
+  insuranceRelevant:'Versicherungsrelevant?',estCost:'Geschätzte Kosten (EUR)',
+  location:'Standort',getGPS:'GPS-Position erfassen',addressManual:'Adresse / Ort',
+  photos:'Fotos',photoHint:'Bitte Fotos aufnehmen.',photoBtn:'Foto',
+  yourContact:'Deine Kontaktdaten',optional:'(optional)',
+  contactHint:'Nicht zwingend nötig – wir kontaktieren dich bei Bedarf über den Disponenten.',
+  yourName:'Dein Name',yourPhone:'Dein Telefon',
+  summary:'Zusammenfassung',sendHint:'Der Rapport wird per E-Mail an die HHM-Disposition gesendet.',
+  successTitle:'Rapport gesendet!',newRapport:'Neuen Rapport erstellen',
+  type:'Typ',customer:'Kunde',sentAt:'Gesendet',
+  back:'Zurück',next:'Weiter',sendBtn:'📧 Rapport senden',
+  stepLabels:['Art der Meldung','Details','Fotos & Kontakt','Zusammenfassung'],
+  ocrRecognizing:'Erkennung:',ocrSuccess:'Kennzeichen erkannt!',ocrFail:'Nicht erkannt – bitte manuell eingeben.',
+  confirmAbort:'Rapport abbrechen? Alle Eingaben gehen verloren.',
+  alertPlate:'Bitte gültiges Kennzeichen eingeben.',alertCategory:'Bitte Kategorie auswählen.',
+  alertDescription:'Bitte Beschreibung eingeben.',alertDamageType:'Bitte Schadensart auswählen.',
+  techRapport:'TECHNISCHER RAPPORT',damageRapport:'SCHADENSRAPPORT',
+},
+en: {
+  headerSub:'Damage & Technical Report',scanTitle:'Scan license plate',
+  scanInfo:'Enter the vehicle number (e.g. ZH5) or take a photo of the plate. The vehicle must be registered with HHM.',
+  scanLabel:'Photograph license plate',scanHint:'Tap to open camera',
+  recognizedPlate:'Recognized plate',correctBtn:'Correct',
+  manualLabel:'Enter plate number',checkBtn:'Check vehicle',orDivider:'— or —',skipScan:'Enter manually',
+  vehicleConfirmed:'Vehicle registered',registeredAs:'Assigned to:',startRapport:'Start report',
+  notRegisteredTitle:'Vehicle not registered',
+  notRegisteredText:'This plate is not in the HHM database. Please contact dispatch:',
+  tryScanAgain:'Scan another vehicle',cancel:'Cancel',
+  whatToReport:'What do you want to report?',
+  techTitle:'Technical problem',techDesc:'Engine, brakes, electronics, tires, hydraulics, etc.',
+  damageTitle:'Damage / Accident',damageDesc:'Bumper, scratches, collision, parking damage, etc.',
+  category:'Category',catEngine:'Engine',catBrakes:'Brakes',catElectronics:'Electronics',
+  catTires:'Tires',catHydraulics:'Hydraulics',catTransmission:'Transmission',catLights:'Lights',
+  catCooling:'Cooling',catSteering:'Steering',catOther:'Other',
+  errorDescription:'Error description',urgency:'Urgency',
+  urgLow:'Low',urgMedium:'Medium',urgHigh:'High',urgStopped:'Vehicle stopped',
+  drivable:'Vehicle drivable?',yes:'Yes',limited:'Limited',no:'No',
+  mileage:'Mileage',damageKind:'Type of damage',
+  dAccident:'Accident',dParking:'Parking damage',dCargo:'Cargo damage',dVandalism:'Vandalism',
+  affectedParts:'Affected parts',pBumper:'Bumper',pFront:'Front',pRear:'Rear',
+  pLeft:'Left side',pRight:'Right side',pRoof:'Roof',pMirror:'Mirror',
+  pTires:'Tires',pCargo:'Cargo area',pUnderbody:'Underbody',
+  description:'Description',severityLabel:'Severity',
+  sevLight:'Light',sevMedium:'Medium',sevHeavy:'Heavy',
+  date:'Date',time:'Time',additionalInfo:'Additional information',
+  hasOpponent:'Other party involved?',oppName:'Name',oppPlate:'Plate number',
+  oppInsurance:'Insurance',oppPhone:'Phone',
+  hasWitness:'Witnesses?',witName:'Witness name',witPhone:'Witness phone',
+  policeInvolved:'Police involved?',policeRef:'Reference number',
+  insuranceRelevant:'Insurance relevant?',estCost:'Estimated cost (EUR)',
+  location:'Location',getGPS:'Get GPS position',addressManual:'Address / Place',
+  photos:'Photos',photoHint:'Please take photos.',photoBtn:'Photo',
+  yourContact:'Your contact details',optional:'(optional)',
+  contactHint:'Not required – we will contact you via the dispatcher if needed.',
+  yourName:'Your name',yourPhone:'Your phone',
+  summary:'Summary',sendHint:'The report will be sent by email to HHM dispatch.',
+  successTitle:'Report sent!',newRapport:'Create new report',
+  type:'Type',customer:'Customer',sentAt:'Sent',
+  back:'Back',next:'Next',sendBtn:'📧 Send report',
+  stepLabels:['Report type','Details','Photos & Contact','Summary'],
+  ocrRecognizing:'Recognizing:',ocrSuccess:'Plate recognized!',ocrFail:'Not recognized – please enter manually.',
+  confirmAbort:'Cancel report? All entries will be lost.',
+  alertPlate:'Please enter a valid plate.',alertCategory:'Please select a category.',
+  alertDescription:'Please enter a description.',alertDamageType:'Please select damage type.',
+  techRapport:'TECHNICAL REPORT',damageRapport:'DAMAGE REPORT',
+},
+pl: {
+  headerSub:'Raport szkód i usterek technicznych',scanTitle:'Zeskanuj tablicę rejestracyjną',
+  scanInfo:'Wpisz numer pojazdu (np. ZH5) lub zrób zdjęcie tablicy. Pojazd musi być zarejestrowany w HHM.',
+  scanLabel:'Zrób zdjęcie tablicy',scanHint:'Dotknij, aby otworzyć aparat',
+  recognizedPlate:'Rozpoznana tablica',correctBtn:'Popraw',
+  manualLabel:'Wpisz numer tablicy',checkBtn:'Sprawdź pojazd',orDivider:'— lub —',skipScan:'Wpisz ręcznie',
+  vehicleConfirmed:'Pojazd zarejestrowany',registeredAs:'Przypisany do:',startRapport:'Rozpocznij raport',
+  notRegisteredTitle:'Pojazd niezarejestrowany',
+  notRegisteredText:'Ta tablica nie znajduje się w bazie HHM. Skontaktuj się z dyspozytorem:',
+  tryScanAgain:'Zeskanuj inny pojazd',cancel:'Anuluj',
+  whatToReport:'Co chcesz zgłosić?',
+  techTitle:'Problem techniczny',techDesc:'Silnik, hamulce, elektronika, opony, hydraulika, itp.',
+  damageTitle:'Szkoda / Wypadek',damageDesc:'Zderzak, zarysowania, kolizja, itp.',
+  category:'Kategoria',catEngine:'Silnik',catBrakes:'Hamulce',catElectronics:'Elektronika',
+  catTires:'Opony',catHydraulics:'Hydraulika',catTransmission:'Skrzynia biegów',catLights:'Oświetlenie',
+  catCooling:'Chłodzenie',catSteering:'Układ kierowniczy',catOther:'Inne',
+  errorDescription:'Opis usterki',urgency:'Pilność',
+  urgLow:'Niska',urgMedium:'Średnia',urgHigh:'Wysoka',urgStopped:'Pojazd unieruchomiony',
+  drivable:'Pojazd jezdny?',yes:'Tak',limited:'Ograniczony',no:'Nie',
+  mileage:'Przebieg',damageKind:'Rodzaj szkody',
+  dAccident:'Wypadek',dParking:'Szkoda parkingowa',dCargo:'Szkoda ładunku',dVandalism:'Wandalizm',
+  affectedParts:'Uszkodzone części',pBumper:'Zderzak',pFront:'Przód',pRear:'Tył',
+  pLeft:'Lewa strona',pRight:'Prawa strona',pRoof:'Dach',pMirror:'Lusterko',
+  pTires:'Opony',pCargo:'Przestrzeń ładunkowa',pUnderbody:'Podwozie',
+  description:'Opis',severityLabel:'Stopień uszkodzenia',
+  sevLight:'Lekki',sevMedium:'Średni',sevHeavy:'Ciężki',
+  date:'Data',time:'Godzina',additionalInfo:'Dodatkowe informacje',
+  hasOpponent:'Druga strona?',oppName:'Imię i nazwisko',oppPlate:'Tablica',
+  oppInsurance:'Ubezpieczenie',oppPhone:'Telefon',
+  hasWitness:'Świadkowie?',witName:'Imię świadka',witPhone:'Telefon świadka',
+  policeInvolved:'Policja?',policeRef:'Nr sprawy',
+  insuranceRelevant:'Dotyczy ubezpieczenia?',estCost:'Szacunkowy koszt (EUR)',
+  location:'Lokalizacja',getGPS:'Pobierz pozycję GPS',addressManual:'Adres / Miejsce',
+  photos:'Zdjęcia',photoHint:'Zrób zdjęcia.',photoBtn:'Zdjęcie',
+  yourContact:'Twoje dane kontaktowe',optional:'(opcjonalnie)',
+  contactHint:'Niewymagane – skontaktujemy się przez dyspozytora w razie potrzeby.',
+  yourName:'Twoje imię',yourPhone:'Twój telefon',
+  summary:'Podsumowanie',sendHint:'Raport zostanie wysłany e-mailem do dyspozycji HHM.',
+  successTitle:'Raport wysłany!',newRapport:'Utwórz nowy raport',
+  type:'Typ',customer:'Klient',sentAt:'Wysłano',
+  back:'Wstecz',next:'Dalej',sendBtn:'📧 Wyślij raport',
+  stepLabels:['Typ zgłoszenia','Szczegóły','Zdjęcia i kontakt','Podsumowanie'],
+  ocrRecognizing:'Rozpoznawanie:',ocrSuccess:'Tablica rozpoznana!',ocrFail:'Nie rozpoznano – wpisz ręcznie.',
+  confirmAbort:'Anulować raport? Wszystkie dane zostaną utracone.',
+  alertPlate:'Wpisz prawidłową tablicę.',alertCategory:'Wybierz kategorię.',
+  alertDescription:'Wpisz opis.',alertDamageType:'Wybierz rodzaj szkody.',
+  techRapport:'RAPORT TECHNICZNY',damageRapport:'RAPORT SZKODY',
+},
+lt: {
+  headerSub:'Žalos ir techninė ataskaita',scanTitle:'Nuskenuokite valstybinį numerį',
+  scanInfo:'Įveskite transporto priemonės numerį (pvz. ZH5) arba nufotografuokite numerio lentelę. Transporto priemonė turi būti registruota HHM.',
+  scanLabel:'Fotografuoti numerį',scanHint:'Palieskite, kad atidarytumėte kamerą',
+  recognizedPlate:'Atpažintas numeris',correctBtn:'Taisyti',
+  manualLabel:'Įveskite numerį',checkBtn:'Patikrinti transporto priemonę',orDivider:'— arba —',skipScan:'Įvesti rankiniu būdu',
+  vehicleConfirmed:'Transporto priemonė registruota',registeredAs:'Priskirta:',startRapport:'Pradėti ataskaitą',
+  notRegisteredTitle:'Transporto priemonė neregistruota',
+  notRegisteredText:'Šis numeris nėra HHM duomenų bazėje. Susisiekite su dispečeriu:',
+  tryScanAgain:'Skenuoti kitą transporto priemonę',cancel:'Atšaukti',
+  whatToReport:'Ką norite pranešti?',
+  techTitle:'Techninė problema',techDesc:'Variklis, stabdžiai, elektronika, padangos ir kt.',
+  damageTitle:'Žala / Avarija',damageDesc:'Buferis, įbrėžimai, susidūrimas ir kt.',
+  category:'Kategorija',catEngine:'Variklis',catBrakes:'Stabdžiai',catElectronics:'Elektronika',
+  catTires:'Padangos',catHydraulics:'Hidraulika',catTransmission:'Pavarų dėžė',catLights:'Apšvietimas',
+  catCooling:'Aušinimas',catSteering:'Vairas',catOther:'Kita',
+  errorDescription:'Gedimo aprašymas',urgency:'Skubumas',
+  urgLow:'Žemas',urgMedium:'Vidutinis',urgHigh:'Aukštas',urgStopped:'Transporto priemonė stovi',
+  drivable:'Ar galima važiuoti?',yes:'Taip',limited:'Ribotai',no:'Ne',
+  mileage:'Rida',damageKind:'Žalos tipas',
+  dAccident:'Avarija',dParking:'Stovėjimo žala',dCargo:'Krovinio žala',dVandalism:'Vandalizmas',
+  affectedParts:'Pažeistos dalys',pBumper:'Buferis',pFront:'Priekis',pRear:'Galas',
+  pLeft:'Kairė pusė',pRight:'Dešinė pusė',pRoof:'Stogas',pMirror:'Veidrodėlis',
+  pTires:'Padangos',pCargo:'Krovinių skyrius',pUnderbody:'Važiuoklė',
+  description:'Aprašymas',severityLabel:'Sunkumas',
+  sevLight:'Lengvas',sevMedium:'Vidutinis',sevHeavy:'Sunkus',
+  date:'Data',time:'Laikas',additionalInfo:'Papildoma informacija',
+  hasOpponent:'Kita šalis?',oppName:'Vardas',oppPlate:'Numeris',
+  oppInsurance:'Draudimas',oppPhone:'Telefonas',
+  hasWitness:'Liudytojai?',witName:'Liudytojo vardas',witPhone:'Liudytojo tel.',
+  policeInvolved:'Policija?',policeRef:'Bylos nr.',
+  insuranceRelevant:'Susijęs su draudimu?',estCost:'Numatoma kaina (EUR)',
+  location:'Vieta',getGPS:'Gauti GPS poziciją',addressManual:'Adresas / Vieta',
+  photos:'Nuotraukos',photoHint:'Darykite nuotraukas.',photoBtn:'Nuotrauka',
+  yourContact:'Jūsų kontaktiniai duomenys',optional:'(neprivaloma)',
+  contactHint:'Nebūtina – su jumis susisieksime per dispečerį, jei reikės.',
+  yourName:'Jūsų vardas',yourPhone:'Jūsų telefonas',
+  summary:'Santrauka',sendHint:'Ataskaita bus išsiųsta el. paštu HHM dispečeriui.',
+  successTitle:'Ataskaita išsiųsta!',newRapport:'Sukurti naują ataskaitą',
+  type:'Tipas',customer:'Klientas',sentAt:'Išsiųsta',
+  back:'Atgal',next:'Toliau',sendBtn:'📧 Siųsti ataskaitą',
+  stepLabels:['Pranešimo tipas','Detalės','Nuotraukos ir kontaktas','Santrauka'],
+  ocrRecognizing:'Atpažinimas:',ocrSuccess:'Numeris atpažintas!',ocrFail:'Neatpažinta – įveskite rankiniu būdu.',
+  confirmAbort:'Atšaukti ataskaitą? Visi duomenys bus prarasti.',
+  alertPlate:'Įveskite teisingą numerį.',alertCategory:'Pasirinkite kategoriją.',
+  alertDescription:'Įveskite aprašymą.',alertDamageType:'Pasirinkite žalos tipą.',
+  techRapport:'TECHNINĖ ATASKAITA',damageRapport:'ŽALOS ATASKAITA',
+},
+ro: {
+  headerSub:'Raport daune și tehnic',scanTitle:'Scanați plăcuța',
+  scanInfo:'Introduceți numărul vehiculului (ex. ZH5) sau fotografiați plăcuța. Vehiculul trebuie înregistrat la HHM.',
+  scanLabel:'Fotografiați plăcuța',scanHint:'Atingeți pentru cameră',
+  recognizedPlate:'Plăcuță recunoscută',correctBtn:'Corectați',
+  manualLabel:'Introduceți nr. plăcuță',checkBtn:'Verifică vehicul',orDivider:'— sau —',skipScan:'Introduceți manual',
+  vehicleConfirmed:'Vehicul înregistrat',registeredAs:'Atribuit la:',startRapport:'Începe raportul',
+  notRegisteredTitle:'Vehicul neînregistrat',
+  notRegisteredText:'Această plăcuță nu se află în baza de date HHM. Contactați dispeceratul:',
+  tryScanAgain:'Scanați alt vehicul',cancel:'Anulează',
+  whatToReport:'Ce doriți să raportați?',
+  techTitle:'Problemă tehnică',techDesc:'Motor, frâne, electronică, anvelope, etc.',
+  damageTitle:'Daună / Accident',damageDesc:'Bară, zgârieturi, coliziune, etc.',
+  category:'Categorie',catEngine:'Motor',catBrakes:'Frâne',catElectronics:'Electronică',
+  catTires:'Anvelope',catHydraulics:'Hidraulică',catTransmission:'Transmisie',catLights:'Iluminare',
+  catCooling:'Răcire',catSteering:'Direcție',catOther:'Altele',
+  errorDescription:'Descrierea defecțiunii',urgency:'Urgență',
+  urgLow:'Scăzută',urgMedium:'Medie',urgHigh:'Ridicată',urgStopped:'Vehicul oprit',
+  drivable:'Vehicul utilizabil?',yes:'Da',limited:'Limitat',no:'Nu',
+  mileage:'Kilometraj',damageKind:'Tipul daunei',
+  dAccident:'Accident',dParking:'Daună parcare',dCargo:'Daună marfă',dVandalism:'Vandalism',
+  affectedParts:'Părți afectate',pBumper:'Bară',pFront:'Față',pRear:'Spate',
+  pLeft:'Stânga',pRight:'Dreapta',pRoof:'Acoperiș',pMirror:'Oglindă',
+  pTires:'Anvelope',pCargo:'Compartiment marfă',pUnderbody:'Șasiu',
+  description:'Descriere',severityLabel:'Gravitate',
+  sevLight:'Ușoară',sevMedium:'Medie',sevHeavy:'Gravă',
+  date:'Data',time:'Ora',additionalInfo:'Informații suplimentare',
+  hasOpponent:'Parte adversă?',oppName:'Nume',oppPlate:'Nr. înmatriculare',
+  oppInsurance:'Asigurare',oppPhone:'Telefon',
+  hasWitness:'Martori?',witName:'Nume martor',witPhone:'Tel. martor',
+  policeInvolved:'Poliția implicată?',policeRef:'Nr. dosar',
+  insuranceRelevant:'Relevant asigurare?',estCost:'Cost estimat (EUR)',
+  location:'Locație',getGPS:'Obțineți poziția GPS',addressManual:'Adresă / Loc',
+  photos:'Fotografii',photoHint:'Faceți fotografii.',photoBtn:'Foto',
+  yourContact:'Datele dvs. de contact',optional:'(opțional)',
+  contactHint:'Nu este obligatoriu – vă contactăm prin dispecer dacă este necesar.',
+  yourName:'Numele dvs.',yourPhone:'Telefonul dvs.',
+  summary:'Rezumat',sendHint:'Raportul va fi trimis prin email la HHM.',
+  successTitle:'Raport trimis!',newRapport:'Creează raport nou',
+  type:'Tip',customer:'Client',sentAt:'Trimis',
+  back:'Înapoi',next:'Înainte',sendBtn:'📧 Trimite raportul',
+  stepLabels:['Tip raport','Detalii','Foto și contact','Rezumat'],
+  ocrRecognizing:'Recunoaștere:',ocrSuccess:'Plăcuță recunoscută!',ocrFail:'Nerecunoscută – introduceți manual.',
+  confirmAbort:'Anulați raportul? Toate datele vor fi pierdute.',
+  alertPlate:'Introduceți o plăcuță validă.',alertCategory:'Selectați o categorie.',
+  alertDescription:'Introduceți o descriere.',alertDamageType:'Selectați tipul daunei.',
+  techRapport:'RAPORT TEHNIC',damageRapport:'RAPORT DAUNE',
+},
+cs: {
+  headerSub:'Hlášení škod a technických závad',scanTitle:'Naskenujte SPZ',
+  scanInfo:'Zadejte číslo vozidla (např. ZH5) nebo vyfoťte SPZ. Vozidlo musí být registrováno u HHM.',
+  scanLabel:'Vyfotit SPZ',scanHint:'Klepněte pro otevření fotoaparátu',
+  recognizedPlate:'Rozpoznaná SPZ',correctBtn:'Opravit',
+  manualLabel:'Zadat SPZ',checkBtn:'Ověřit vozidlo',orDivider:'— nebo —',skipScan:'Zadat ručně',
+  vehicleConfirmed:'Vozidlo registrováno',registeredAs:'Přiřazeno:',startRapport:'Zahájit hlášení',
+  notRegisteredTitle:'Vozidlo neregistrováno',
+  notRegisteredText:'Tato SPZ není v databázi HHM. Kontaktujte dispečink:',
+  tryScanAgain:'Naskenovat jiné vozidlo',cancel:'Zrušit',
+  whatToReport:'Co chcete nahlásit?',
+  techTitle:'Technický problém',techDesc:'Motor, brzdy, elektronika, pneumatiky apod.',
+  damageTitle:'Škoda / Nehoda',damageDesc:'Nárazník, škrábance, kolize apod.',
+  category:'Kategorie',catEngine:'Motor',catBrakes:'Brzdy',catElectronics:'Elektronika',
+  catTires:'Pneumatiky',catHydraulics:'Hydraulika',catTransmission:'Převodovka',catLights:'Osvětlení',
+  catCooling:'Chlazení',catSteering:'Řízení',catOther:'Ostatní',
+  errorDescription:'Popis závady',urgency:'Naléhavost',
+  urgLow:'Nízká',urgMedium:'Střední',urgHigh:'Vysoká',urgStopped:'Vozidlo stojí',
+  drivable:'Vozidlo pojízdné?',yes:'Ano',limited:'Omezeně',no:'Ne',
+  mileage:'Stav km',damageKind:'Typ škody',
+  dAccident:'Nehoda',dParking:'Parkovací škoda',dCargo:'Škoda na nákladu',dVandalism:'Vandalismus',
+  affectedParts:'Poškozené díly',pBumper:'Nárazník',pFront:'Přední',pRear:'Zadní',
+  pLeft:'Levá strana',pRight:'Pravá strana',pRoof:'Střecha',pMirror:'Zrcátko',
+  pTires:'Pneumatiky',pCargo:'Nákladový prostor',pUnderbody:'Podvozek',
+  description:'Popis',severityLabel:'Závažnost',
+  sevLight:'Lehká',sevMedium:'Střední',sevHeavy:'Těžká',
+  date:'Datum',time:'Čas',additionalInfo:'Další informace',
+  hasOpponent:'Druhá strana?',oppName:'Jméno',oppPlate:'SPZ',
+  oppInsurance:'Pojištění',oppPhone:'Telefon',
+  hasWitness:'Svědci?',witName:'Jméno svědka',witPhone:'Telefon svědka',
+  policeInvolved:'Policie?',policeRef:'Číslo spisu',
+  insuranceRelevant:'Pojistná událost?',estCost:'Odhadované náklady (EUR)',
+  location:'Místo',getGPS:'Získat GPS pozici',addressManual:'Adresa / Místo',
+  photos:'Fotografie',photoHint:'Pořiďte fotografie.',photoBtn:'Foto',
+  yourContact:'Vaše kontaktní údaje',optional:'(volitelné)',
+  contactHint:'Není povinné – budeme vás kontaktovat přes dispečera, pokud bude potřeba.',
+  yourName:'Vaše jméno',yourPhone:'Váš telefon',
+  summary:'Shrnutí',sendHint:'Hlášení bude odesláno emailem dispečinku HHM.',
+  successTitle:'Hlášení odesláno!',newRapport:'Vytvořit nové hlášení',
+  type:'Typ',customer:'Zákazník',sentAt:'Odesláno',
+  back:'Zpět',next:'Dále',sendBtn:'📧 Odeslat hlášení',
+  stepLabels:['Typ hlášení','Podrobnosti','Fotky a kontakt','Shrnutí'],
+  ocrRecognizing:'Rozpoznávání:',ocrSuccess:'SPZ rozpoznána!',ocrFail:'Nerozpoznáno – zadejte ručně.',
+  confirmAbort:'Zrušit hlášení? Všechna data budou ztracena.',
+  alertPlate:'Zadejte platnou SPZ.',alertCategory:'Vyberte kategorii.',
+  alertDescription:'Zadejte popis.',alertDamageType:'Vyberte typ škody.',
+  techRapport:'TECHNICKÉ HLÁŠENÍ',damageRapport:'HLÁŠENÍ ŠKODY',
+},
+};
+
+const LANGS = [
+  {code:'de',label:'🇩🇪 Deutsch'},{code:'en',label:'🇬🇧 English'},
+  {code:'pl',label:'🇵🇱 Polski'},{code:'lt',label:'🇱🇹 Lietuvių'},
+  {code:'ro',label:'🇷🇴 Română'},{code:'cs',label:'🇨🇿 Čeština'},
+];
+
+let lang = 'de';
+
+function detectLang() {
+  const bl = (navigator.language||'de').toLowerCase().slice(0,2);
+  return T[bl] ? bl : 'de';
+}
+
+function setLang(code) {
+  lang = code;
+  document.querySelectorAll('.lang-btn').forEach(b => b.classList.toggle('active', b.dataset.lang===code));
+  document.querySelectorAll('[data-t]').forEach(el => {
+    const key = el.dataset.t;
+    if (T[lang][key]) el.textContent = T[lang][key];
+  });
+  // Update placeholders
+  if (T[lang].errorDescription) document.getElementById('techDescription')&&(document.getElementById('techDescription').placeholder = T[lang].errorDescription);
+  if (T[lang].description) document.getElementById('damageDescription')&&(document.getElementById('damageDescription').placeholder = T[lang].description);
+}
+
+function buildLangBars() {
+  ['langBar','langBar2'].forEach(id => {
+    const bar = document.getElementById(id);
+    if (!bar) return;
+    bar.innerHTML = '';
+    LANGS.forEach(l => {
+      const btn = document.createElement('button');
+      btn.className = 'lang-btn' + (l.code===lang?' active':'');
+      btn.textContent = l.label;
+      btn.dataset.lang = l.code;
+      btn.onclick = () => setLang(l.code);
+      bar.appendChild(btn);
+    });
+  });
+}
+
+// ====== STATE ======
+let step=1, totalSteps=4;
+let data={plate:'',customer:null,reportType:'',techCategory:'',urgency:'',damageType:'',damagedParts:[],severity:'',drivable:'',photos:[],gpsLat:null,gpsLng:null};
+
+// ====== KONFIGURATION ======
+// Wenn Power Automate bereit ist, URLs hier eintragen:
+const CONFIG = {
+  // Fahrzeugdaten: Power Automate HTTP-Trigger URL (leer = eingebettete Daten nutzen)
+  vehiclesUrl: '',
+  // Rapport-Versand: Power Automate HTTP-Trigger URL (leer = mailto-Fallback)
+  rapportUrl: '',
+  // Fallback E-Mail
+  rapportEmail: 'roger.rohner@hyundaihm.com'
+};
+
+// Fahrzeugdaten (eingebettet für Offline-/Standalone-Betrieb)
+let VEHICLES = [
+  {vin:'KMFFB18WPLC023493',name:'Mewa 2',plate:'ZH1'},
+  {vin:'KMFFB18WPLC024680',name:'Migros Zürich 2',plate:'ZH2'},
+  {vin:'KMFFB18WPLC024681',name:'Coop OT 1',plate:'ZH3'},
+  {vin:'KMFFB18WPLC024682',name:'Migros Ost 1',plate:'BL1185'},
+  {vin:'KMFFB18WPLC024683',name:'Traveco 1',plate:'BL1186'},
+  {vin:'KMFFB18WPLC024684',name:'Galliker 1',plate:'ZH6'},
+  {vin:'KMFFB18WPLC024685',name:'Camion 1',plate:'ZH7'},
+  {vin:'KMFFB18WPLC024686',name:'Murpf 1',plate:'ZH8'},
+  {vin:'KMFFB18WPLC024687',name:'Leclerc 1',plate:'ZH9'},
+  {vin:'KMFFB18WPLC024688',name:'Migros Suhr 1',plate:'ZH10'},
+  {vin:'KMFFB18WPLC024689',name:'Coop OT 2',plate:'ZH11'},
+  {vin:'KMFFB18WPLC024692',name:'Emmi 1',plate:'ZH12'},
+  {vin:'KMFFB18WPLC024693',name:'Migros Zürich 3',plate:'ZH13'},
+  {vin:'KMFFB18WPLC024694',name:'Migros Ost 2',plate:'ZH14'},
+  {vin:'KMFFB18WPLC024695',name:'Cavegn 1',plate:'ZH15'},
+  {vin:'KMFFB18WPLC024696',name:'Cavegn 2',plate:'ZH16'},
+  {vin:'KMFFB18WPLC024697',name:'Galliker 2',plate:'ZH17'},
+  {vin:'KMFFB18WPLC024698',name:'Emmi 2',plate:'ZH18'},
+  {vin:'KMFFB18WPLC024700',name:'SPAR 1',plate:'ZH19'},
+  {vin:'KMFFB18WPLC024701',name:'Schwab 1',plate:'ZH20'},
+  {vin:'KMFFB18WPMC024366',name:'Weiss 1',plate:'ZH21'},
+  {vin:'KMFFB18WPMC024367',name:'Retralog 1',plate:'ZH22'},
+  {vin:'KMFFB18WPMC024368',name:'Camion 2',plate:'ZH23'},
+  {vin:'KMFFB18WPMC024369',name:'Migros Zürich 4',plate:'ZH24'},
+  {vin:'KMFFB18WPMC024370',name:'Migros NEFR 1',plate:'ZH25'},
+  {vin:'KMFFB18WPMC024371',name:'Zingg 1',plate:'ZH26'},
+  {vin:'KMFFB18WPMC025386',name:'Mewa 1',plate:'ZH27'},
+  {vin:'KMFFB18WPMC025387',name:'Von Bergen 2',plate:'ZH28'},
+  {vin:'KMFFB18WPMC025388',name:'Galliker 4',plate:'ZH29'},
+  {vin:'KMFFB18WPMC025389',name:'Von Bergen 1',plate:'ZH30'},
+  {vin:'KMFFB18WPMC025474',name:'Galliker 5',plate:'ZH31'},
+  {vin:'KMFFB18WPMC025475',name:'Galliker 6',plate:'ZH32'},
+  {vin:'KMFFB18WPMC025476',name:'Rotra 1',plate:'ZH33'},
+  {vin:'KMFFB18WPMC025477',name:'FruchtXpress 1',plate:'ZH34'},
+  {vin:'KMFFB18WPMC025478',name:'FruchtXpress 2',plate:'ZH35'},
+  {vin:'KMFFB18WPMC025479',name:'Havi 1',plate:'ZH36'},
+  {vin:'KMFFB18WPMC025480',name:'Migros Luzern 1',plate:'ZH37'},
+  {vin:'KMFFB18WPMC025481',name:'Imbach 1',plate:'ZH38'},
+  {vin:'KMFFB18WPMC025482',name:'Coop SR1',plate:'ZH39'},
+  {vin:'KMFFB18WPMC025483',name:'Coop SR2',plate:'ZH40'},
+  {vin:'KMFFB18WPMC025718',name:'Coop NWZZ 2',plate:'ZH41'},
+  {vin:'KMFFB18WPMC025719',name:'Coop NWZZ 1',plate:'ZH42'},
+  {vin:'KMFFB18WPMC025720',name:'Coop NWZZ 3',plate:'ZH43'},
+  {vin:'KMFFB18WPMC025721',name:'Retralog 2',plate:'ZH44'},
+  {vin:'KMFFB18WPMC025722',name:'Schöni 1',plate:'ZH45'},
+  {vin:'KMFFB18WPMC025723',name:'Migros Basel 1',plate:'ZH46'},
+  {vin:'KMFFB18YPNC028205',name:'Retralog 6x2',plate:'ZH47'},
+  {vin:'',name:'Migros Ersatz 1',plate:'ZH48'},
+  {vin:'',name:'Migros Ersatz 2',plate:'ZH49'},
+  {vin:'',name:'ArmaSuisse 1',plate:'ZH50'},
+  {vin:'',name:'ArmaSuisse 2',plate:'ZH51'},
+];
+
+// Lookup by plate (case-insensitive, stripped of spaces/dashes/dots)
+function normalizePlate(s){return s.toUpperCase().replace(/[\s\-\.\/]/g,'').trim();}
+function findVehicle(input) {
+  const q = normalizePlate(input);
+  if(!q) return null;
+  return VEHICLES.find(v => normalizePlate(v.plate) === q);
+}
+
+// ====== OCR ======
+async function handlePlatePhoto(input) {
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=async(e)=>{
+    document.getElementById('scanPreviewImg').src=e.target.result;
+    document.getElementById('scanPreview').style.display='block';
+    document.getElementById('scanArea').style.display='none';
+    const status=document.getElementById('ocrStatus'),stxt=document.getElementById('ocrStatusText');
+    const pbar=document.getElementById('ocrProgressBar'),pfill=document.getElementById('ocrProgressFill');
+    status.className='ocr-status loading'; stxt.textContent=t('ocrRecognizing'); pbar.style.display='block';
+    try {
+      const canvas=document.getElementById('scanCanvas'),ctx=canvas.getContext('2d'),img=new Image();
+      img.onload=async()=>{
+        canvas.width=img.width;canvas.height=img.height;ctx.drawImage(img,0,0);
+        // Kontrast erhöhen aber nicht zerstören
+        const id=ctx.getImageData(0,0,canvas.width,canvas.height),d=id.data;
+        for(let i=0;i<d.length;i+=4){
+          const a=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114);
+          const v=a>140?255:a<80?0:Math.round((a-80)/60*255);
+          d[i]=d[i+1]=d[i+2]=v;
+        }
+        ctx.putImageData(id,0,0);
+        // Zwei Durchläufe: Englisch (Zahlen/Buchstaben) + Deutsch
+        let plate=null, ocrText='';
+        for(const lng of ['eng','deu']){
+          if(plate) break;
+          const result=await Tesseract.recognize(canvas,lng,{logger:(m)=>{
+            if(m.status==='recognizing text'){pfill.style.width=Math.round(m.progress*100)+'%';stxt.textContent=t('ocrRecognizing')+' '+Math.round(m.progress*100)+'%';}
+          }});
+          ocrText=result.data.text;
+          console.log('OCR ['+lng+']:',ocrText);
+          plate=extractPlate(ocrText);
+        }
+        pbar.style.display='none';
+        if(plate){data.plate=plate;showPlate(plate);lookupVehicle(plate);status.className='ocr-status success';stxt.textContent=t('ocrSuccess')+' ('+ocrText.trim().substring(0,30)+')';}
+        else{status.className='ocr-status error';stxt.textContent=t('ocrFail')+' – "'+ocrText.trim().substring(0,40)+'"';document.getElementById('manualPlateInput').focus();}
+      };img.src=e.target.result;
+    }catch(err){pbar.style.display='none';status.className='ocr-status error';stxt.textContent=t('ocrFail');document.getElementById('manualPlateInput').focus();}
+  };reader.readAsDataURL(file);input.value='';
+}
+
+function t(key){return T[lang][key]||T.de[key]||key;}
+
+function extractPlate(text){
+  // OCR-Text bereinigen
+  let c=text.toUpperCase().replace(/[^A-Z0-9\s\-]/g,'').trim();
+  // Strategie 1: Direkt in der Fahrzeugliste suchen (alle Worte/Tokens prüfen)
+  const tokens=c.replace(/[\s\-]+/g,' ').split(' ');
+  // Kombinationen von 1-3 aufeinanderfolgenden Tokens testen
+  for(let len=1;len<=Math.min(3,tokens.length);len++){
+    for(let i=0;i<=tokens.length-len;i++){
+      const combo=tokens.slice(i,i+len).join('');
+      const v=findVehicle(combo);
+      if(v) return v.plate;
+    }
+  }
+  // Strategie 2: Buchstaben+Ziffern-Muster extrahieren und testen
+  const patterns=c.match(/[A-Z]{1,3}\s*\d{1,4}/g)||[];
+  for(const p of patterns){
+    const norm=p.replace(/\s/g,'');
+    const v=findVehicle(norm);
+    if(v) return v.plate;
+  }
+  // Strategie 3: Alles zusammen als ein String versuchen
+  const full=c.replace(/[\s\-]/g,'');
+  const v=findVehicle(full);
+  if(v) return v.plate;
+  return null;
+}
+function showPlate(p){document.getElementById('plateResult').classList.remove('hidden');document.getElementById('plateDisplayText').textContent=p;}
+function editPlate(){document.getElementById('plateResult').classList.add('hidden');document.getElementById('confirmedCard').style.display='none';document.getElementById('blockedMsg').style.display='none';document.getElementById('manualPlateInput').value=data.plate;document.getElementById('manualPlateInput').focus();}
+function checkManualPlate(){
+  const raw=document.getElementById('manualPlateInput').value.trim();
+  if(raw.length<2){alert(t('alertPlate'));return;}
+  const norm=normalizePlate(raw);
+  // Finde Fahrzeug und nutze dessen offizielle Plate-Schreibweise
+  const v=findVehicle(raw);
+  data.plate=v?v.plate:norm;
+  showPlate(data.plate);
+  lookupVehicle(data.plate);
+}
+function lookupVehicle(plate){
+  const v = findVehicle(plate);
+  if(v){
+    data.customer=v;
+    document.getElementById('cName').textContent=v.name;
+    document.getElementById('cPlate').textContent=v.plate;
+    if(v.vin) document.getElementById('cVin').textContent=v.vin;
+    document.getElementById('cVinRow').style.display=v.vin?'flex':'none';
+    document.getElementById('confirmedCard').style.display='block';
+    document.getElementById('blockedMsg').style.display='none';
+    setTimeout(()=>document.getElementById('confirmedCard').scrollIntoView({behavior:'smooth',block:'center'}),150);
+  } else {
+    data.customer=null;
+    document.getElementById('confirmedCard').style.display='none';
+    document.getElementById('blockedMsg').style.display='block';
+    setTimeout(()=>document.getElementById('blockedMsg').scrollIntoView({behavior:'smooth',block:'center'}),150);
+  }
+}
+
+function startRapport(){document.getElementById('startScreen').classList.add('hidden');document.getElementById('rapportApp').classList.remove('hidden');document.getElementById('rapportPlate').textContent=`${data.customer.plate} – ${data.customer.name}`;step=1;updateNav();}
+function abortRapport(){if(confirm(t('confirmAbort')))fullReset();}
+
+function selectType(type){
+  data.reportType=type;
+  const b=document.getElementById('typeBadge');
+  b.textContent=type==='tech'?t('techTitle'):t('damageTitle');
+  b.className='type-badge '+(type==='tech'?'tech':'damage');
+  step=2;updateNav();window.scrollTo(0,0);
+}
+
+function updateNav(){
+  for(let i=1;i<=4;i++){const el=document.getElementById('step'+i);if(el)el.classList.toggle('hidden',i!==step);}
+  document.getElementById('successScreen').classList.add('hidden');
+  document.getElementById('navBtns').classList.remove('hidden');
+  if(step===2){
+    document.getElementById('techDetails').classList.toggle('hidden',data.reportType!=='tech');
+    document.getElementById('damageDetails').classList.toggle('hidden',data.reportType!=='damage');
+    if(data.reportType==='damage'){const now=new Date();if(!document.getElementById('damageDate').value)document.getElementById('damageDate').value=now.toISOString().split('T')[0];if(!document.getElementById('damageTime').value)document.getElementById('damageTime').value=now.toTimeString().slice(0,5);}
+  }
+  if(step===4)buildSummary();
+  document.getElementById('progressFill').style.width=(step/totalSteps*100)+'%';
+  const labels=T[lang].stepLabels||T.de.stepLabels;
+  document.getElementById('stepInfo').textContent=`${step} / ${totalSteps} – ${labels[step-1]}`;
+  document.getElementById('prevBtn').classList.toggle('hidden',step===1);
+  document.getElementById('nextBtn').textContent=step===4?t('sendBtn'):t('next');
+}
+function nextStep(){
+  if(step===1&&!data.reportType){alert(t('whatToReport'));return;}
+  if(step===2&&!validateDetails())return;
+  if(step===4){sendReport();return;}
+  step++;updateNav();window.scrollTo(0,0);
+}
+function prevStep(){if(step>1){step--;updateNav();window.scrollTo(0,0);}}
+function validateDetails(){
+  if(data.reportType==='tech'){if(!data.techCategory){alert(t('alertCategory'));return false;}if(!document.getElementById('techDescription').value.trim()){alert(t('alertDescription'));return false;}}
+  else{if(!data.damageType){alert(t('alertDamageType'));return false;}if(!document.getElementById('damageDescription').value.trim()){alert(t('alertDescription'));return false;}}
+  return true;
+}
+
+function sel(el,f){el.parentElement.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));el.classList.add('selected');data[f]=el.textContent.trim();}
+function togM(el,f){el.classList.toggle('selected');data[f]=Array.from(el.parentElement.querySelectorAll('.option-btn.selected')).map(b=>b.textContent.trim());}
+function togS(el){el.classList.toggle('on');const m={'hasOpponent':'opponentFields','hasWitness':'witnessFields','policeInvolved':'policeFields'};const fid=m[el.id];if(fid)document.getElementById(fid).classList.toggle('hidden',!el.classList.contains('on'));}
+function getGPS(){
+  const btn=document.getElementById('gpsBtn'),res=document.getElementById('gpsResult');
+  btn.disabled=true;btn.innerHTML='📍 ...';
+  if('geolocation' in navigator){navigator.geolocation.getCurrentPosition(p=>{data.gpsLat=p.coords.latitude.toFixed(6);data.gpsLng=p.coords.longitude.toFixed(6);btn.innerHTML='✅ GPS OK';btn.style.background='var(--success-light)';btn.style.borderColor='var(--success)';btn.style.color='var(--success)';res.textContent=`${data.gpsLat}, ${data.gpsLng}`;btn.disabled=false;},()=>{btn.innerHTML='❌ GPS';btn.style.borderColor='var(--danger)';btn.style.color='var(--danger)';btn.disabled=false;},{enableHighAccuracy:true,timeout:10000});}
+  else{btn.innerHTML='❌ GPS';btn.disabled=false;}
+}
+
+function handlePhotos(input){Array.from(input.files).forEach(f=>{if(data.photos.length>=10)return;const r=new FileReader();r.onload=e=>{data.photos.push({name:f.name,data:e.target.result});renderPhotos();};r.readAsDataURL(f);});input.value='';}
+function renderPhotos(){const g=document.getElementById('photoGrid');g.innerHTML='';data.photos.forEach((p,i)=>{const d=document.createElement('div');d.className='photo-thumb';d.innerHTML=`<img src="${p.data}"><button class="photo-remove" onclick="removePhoto(${i})">×</button>`;g.appendChild(d);});if(data.photos.length<10){const a=document.createElement('div');a.className='photo-add';a.onclick=()=>document.getElementById('photoFileInput').click();a.innerHTML=`<span style="font-size:28px">📷</span><span>${t('photoBtn')}</span>`;g.appendChild(a);}}
+function removePhoto(i){data.photos.splice(i,1);renderPhotos();}
+
+function buildSummary(){
+  const val=(id)=>document.getElementById(id)?.value?.trim()||'–';
+  const c=data.customer;
+  let html=`<div class="summary-row"><span class="summary-label">${t('recognizedPlate')}</span><span class="summary-value" style="font-weight:700">${data.plate}</span></div>`;
+  html+=`<div class="summary-row"><span class="summary-label">${t('customer')}</span><span class="summary-value">${c.name}</span></div>`;
+  html+=`<div class="summary-row"><span class="summary-label">${t('type')}</span><span class="summary-value">${data.reportType==='tech'?'<span class="badge badge-orange">'+t('techTitle')+'</span>':'<span class="badge badge-danger">'+t('damageTitle')+'</span>'}</span></div>`;
+  if(data.reportType==='tech'){
+    html+=`<div class="summary-row"><span class="summary-label">${t('category')}</span><span class="summary-value">${data.techCategory}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('description')}</span><span class="summary-value" style="max-width:55%;text-align:right">${val('techDescription')}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('urgency')}</span><span class="summary-value">${data.urgency||'–'}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('drivable')}</span><span class="summary-value">${data.drivable||'–'}</span></div>`;
+  } else {
+    html+=`<div class="summary-row"><span class="summary-label">${t('damageKind')}</span><span class="summary-value">${data.damageType}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('affectedParts')}</span><span class="summary-value">${data.damagedParts.join(', ')||'–'}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('description')}</span><span class="summary-value" style="max-width:55%;text-align:right">${val('damageDescription')}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('severityLabel')}</span><span class="summary-value">${data.severity||'–'}</span></div>`;
+    html+=`<div class="summary-row"><span class="summary-label">${t('drivable')}</span><span class="summary-value">${data.drivable||'–'}</span></div>`;
+  }
+  const dn=document.getElementById('driverName').value.trim(),dp=document.getElementById('driverPhone').value.trim();
+  if(dn||dp)html+=`<div class="summary-row"><span class="summary-label">${t('yourContact')}</span><span class="summary-value">${dn||'–'} / ${dp||'–'}</span></div>`;
+  html+=`<div class="summary-row"><span class="summary-label">${t('photos')}</span><span class="summary-value">${data.photos.length}</span></div>`;
+  document.getElementById('summaryContent').innerHTML=html;
+  const sp=document.getElementById('summaryPhotos');sp.innerHTML='';data.photos.forEach(p=>{const img=document.createElement('img');img.src=p.data;sp.appendChild(img);});
+  document.getElementById('summaryPhotosCard').classList.toggle('hidden',data.photos.length===0);
+}
+
+function sendReport(){
+  const val=(id)=>document.getElementById(id)?.value?.trim()||'';
+  const rid='HHM-'+Date.now().toString(36).toUpperCase();
+  const c=data.customer, tl=data.reportType==='tech'?t('techRapport'):t('damageRapport');
+
+  // Rapport-Daten als strukturiertes Objekt
+  const rapport = {
+    id: rid, timestamp: new Date().toISOString(), lang: lang,
+    type: data.reportType, plate: c.plate, truck: c.name, vin: c.vin||'',
+    gpsLat: data.gpsLat, gpsLng: data.gpsLng,
+    driverName: val('driverName'), driverPhone: val('driverPhone'),
+    photos: data.photos.length
+  };
+  if(data.reportType==='tech'){
+    Object.assign(rapport, {category:data.techCategory, description:val('techDescription'),
+      urgency:data.urgency||'', drivable:data.drivable||'', mileage:val('techMileage')});
+  } else {
+    Object.assign(rapport, {damageType:data.damageType, damagedParts:data.damagedParts,
+      description:val('damageDescription'), severity:data.severity||'', drivable:data.drivable||'',
+      date:val('damageDate'), time:val('damageTime'), estCost:val('estCost'),
+      opponent:document.getElementById('hasOpponent')?.classList.contains('on')?
+        {name:val('oppName'),plate:val('oppPlate'),insurance:val('oppInsurance'),phone:val('oppPhone')}:null,
+      witness:document.getElementById('hasWitness')?.classList.contains('on')?
+        {name:val('witName'),phone:val('witPhone')}:null,
+      police:document.getElementById('policeInvolved')?.classList.contains('on')?val('policeRef'):'',
+      insuranceRelevant:document.getElementById('insRelevant')?.classList.contains('on')||false,
+      location:val('locationText')});
+  }
+
+  // Senden: Power Automate oder Fallback mailto
+  if(CONFIG.rapportUrl){
+    // Power Automate HTTP-Trigger
+    fetch(CONFIG.rapportUrl,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(rapport)
+    }).then(r=>{if(!r.ok)throw new Error(r.status);showSuccess(rid,c);})
+      .catch(err=>{alert('Übermittlung fehlgeschlagen ('+err.message+'). Fallback: E-Mail wird geöffnet.');
+        sendMailFallback(rid,tl,c);showSuccess(rid,c);});
+  } else {
+    sendMailFallback(rid,tl,c);showSuccess(rid,c);
+  }
+}
+
+function sendMailFallback(rid,tl,c){
+  const val=(id)=>document.getElementById(id)?.value?.trim()||'';
+  let body=`${tl} ${rid}\n================================\n\n`;
+  body+=`Plate: ${c.plate}\nTruck: ${c.name}\n${c.vin?'VIN: '+c.vin+'\n':''}\n`;
+  if(data.reportType==='tech'){
+    body+=`${t('category')}: ${data.techCategory}\n${t('description')}: ${val('techDescription')}\n`;
+    body+=`${t('urgency')}: ${data.urgency||'-'}\n${t('drivable')}: ${data.drivable||'-'}\n${t('mileage')}: ${val('techMileage')||'-'}\n`;
+  } else {
+    body+=`${t('damageKind')}: ${data.damageType}\n${t('affectedParts')}: ${data.damagedParts.join(', ')||'-'}\n`;
+    body+=`${t('description')}: ${val('damageDescription')}\n${t('severityLabel')}: ${data.severity||'-'}\n`;
+    body+=`${t('drivable')}: ${data.drivable||'-'}\n`;
+  }
+  const dn=val('driverName'),dp=val('driverPhone');
+  if(dn||dp)body+=`\n${t('yourContact')}: ${dn||'-'} / ${dp||'-'}\n`;
+  body+=`\n${t('photos')}: ${data.photos.length}\n================================`;
+  const subj=encodeURIComponent(`${tl} ${rid} – ${data.plate}`);
+  window.location.href=`mailto:${CONFIG.rapportEmail}?subject=${subj}&body=${encodeURIComponent(body)}`;
+}
+
+function showSuccess(rid,c){
+  document.querySelectorAll('.step').forEach(s=>s.classList.add('hidden'));
+  document.getElementById('successScreen').classList.remove('hidden');
+  document.getElementById('navBtns').classList.add('hidden');
+  document.getElementById('rptId').textContent=rid;
+  document.getElementById('rptType').textContent=data.reportType==='tech'?t('techTitle'):t('damageTitle');
+  document.getElementById('rptCustomer').textContent=c.name;
+  document.getElementById('rptTime').textContent=new Date().toLocaleString('de-CH');
+  document.getElementById('successText').textContent=t('successTitle');
+}
+
+function resetStart(){
+  data={plate:'',customer:null,reportType:'',techCategory:'',urgency:'',damageType:'',damagedParts:[],severity:'',drivable:'',photos:[],gpsLat:null,gpsLng:null};
+  document.getElementById('scanArea').style.display='';document.getElementById('scanPreview').style.display='none';
+  document.getElementById('ocrStatus').className='ocr-status';document.getElementById('ocrProgressBar').style.display='none';
+  document.getElementById('plateResult').classList.add('hidden');
+  document.getElementById('confirmedCard').style.display='none';document.getElementById('blockedMsg').style.display='none';
+  document.getElementById('manualPlateInput').value='';
+}
+function fullReset(){
+  resetStart();
+  document.querySelectorAll('input[type="text"],input[type="number"],input[type="tel"],textarea').forEach(el=>el.value='');
+  document.querySelectorAll('.option-btn').forEach(el=>el.classList.remove('selected'));
+  document.querySelectorAll('.toggle.on').forEach(el=>el.classList.remove('on'));
+  document.querySelectorAll('[id$="Fields"]').forEach(el=>el.classList.add('hidden'));
+  document.getElementById('typeBadge').textContent='';document.getElementById('typeBadge').className='type-badge';
+  renderPhotos();step=1;
+  document.getElementById('rapportApp').classList.add('hidden');document.getElementById('startScreen').classList.remove('hidden');
+}
+
+// ====== DEVICE DETECTION ======
+const isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || (navigator.maxTouchPoints > 1 && window.innerWidth < 768);
+document.body.classList.add(isMobile ? 'is-mobile' : 'is-desktop');
+
+// Auf Mobile: Scan-Area nur anzeigen wenn Kamera verfügbar
+if(!isMobile){
+  // Desktop: Scan-Bereich ausblenden (kein Kamerazugriff sinnvoll)
+  const scanDiv = document.getElementById('scanArea');
+  const orDiv = scanDiv?.previousElementSibling;
+  if(scanDiv) scanDiv.style.display='none';
+  if(orDiv) orDiv.style.display='none';
+}
+
+// INIT
+lang=detectLang();buildLangBars();setLang(lang);updateNav();
+// Optional: Fahrzeugdaten von externer URL laden (überschreibt eingebettete Daten)
+if(CONFIG.vehiclesUrl){
+  fetch(CONFIG.vehiclesUrl).then(r=>r.json()).then(d=>{if(Array.isArray(d)&&d.length)VEHICLES=d;console.log('Fahrzeugdaten geladen:',VEHICLES.length);}).catch(()=>console.log('Externe Daten nicht verfügbar, nutze eingebettete Daten.'));
+}
+</script>
+</body>
+</html>
